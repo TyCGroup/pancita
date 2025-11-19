@@ -257,7 +257,7 @@ export async function loadHistorialPedidos(reload = false) {
     }
 }
 
-window.verDetallePedido = async function(pedidoId) {
+export async function verDetallePedido(pedidoId) {
     try {
         let pedido = pedidosCache.find(p => p.id === pedidoId);
         
@@ -276,7 +276,10 @@ window.verDetallePedido = async function(pedidoId) {
         console.error('Error cargando detalle:', error);
         alert('Error al cargar detalle del pedido', 'error');
     }
-};
+}
+
+// También disponible globalmente para onclick en HTML
+window.verDetallePedido = verDetallePedido;
 
 // Agregar items a un pedido existente
 window.agregarItemsAPedido = async function(pedidoId) {

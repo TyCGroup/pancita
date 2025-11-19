@@ -14,6 +14,7 @@ import {
 import { app } from './firebase-config.js';
 import { showScreen } from './navigation.js';
 import { alert, prompt } from './modals.js';
+import { verDetallePedido } from './pedidos.js';
 
 const db = getFirestore(app);
 let clientes = [];
@@ -212,6 +213,7 @@ async function loadPedidosCliente(clienteId) {
     let hayPedidos = false;
     
     pedidosSnap.forEach(docSnap => {
+        const pedidoId = docSnap.id;
         const pedido = docSnap.data();
         
         let itemsDelCliente = [];
@@ -239,6 +241,8 @@ async function loadPedidosCliente(clienteId) {
             
             const div = document.createElement('div');
             div.className = 'list-item';
+            div.style.cursor = 'pointer';
+            div.onclick = () => verDetallePedido(pedidoId);
             div.innerHTML = `
                 <div class="list-item-body">
                     <p><strong>Folio: ${pedido.folio}</strong></p>
@@ -247,9 +251,6 @@ async function loadPedidosCliente(clienteId) {
                     ${totalPriceShoes > 0 ? `<p>Total Price Shoes: $${totalPriceShoes.toFixed(2)}</p>` : ''}
                     <p>Total Precio Final: $${totalPrecioFinal.toFixed(2)}</p>
                     <p>Fecha: ${fecha}</p>
-                    <button class="btn-secondary" style="margin-top: 10px; width: 100%;" onclick="verItemsCliente('${docSnap.id}', '${clienteId}')">
-                        Ver Items
-                    </button>
                 </div>
             `;
             list.appendChild(div);
@@ -260,45 +261,6 @@ async function loadPedidosCliente(clienteId) {
         list.innerHTML = '<div class="empty-state"><p>No hay pedidos para este cliente</p></div>';
     }
 }
-
-window.verItemsCliente = async function(pedidoId, clienteId) {
-    try {
-        const pedidoDoc = await getDoc(doc(db, 'pedidos', pedidoId));
-        if (pedidoDoc.exists()) {
-            const pedido = pedidoDoc.data();
-            let detalles = `Folio: ${pedido.folio}\n\nItems del cliente:\n\n`;
-            
-            if (pedido.items && pedido.items.length > 0) {
-                const itemsDelCliente = pedido.items.filter(item => item.clienteId === clienteId);
-                itemsDelCliente.forEach((item, index) => {
-                    detalles += `━━━━━━━━━━━━━━━━━━━━\n`;
-                    detalles += `Item ${index + 1}:\n`;
-                    detalles += `  Categoría: ${item.categoria}\n`;
-                    detalles += `  Número: ${item.numero}\n`;
-                    detalles += `  Price Shoes: $${item.priceShoes.toFixed(2)}\n`;
-                    detalles += `  Precio Final: $${item.precioFinal.toFixed(2)}\n`;
-                    if (item.ubicacion) {
-                        detalles += `  Ubicación: ${item.ubicacion}\n`;
-                    }
-                    detalles += `\n`;
-                });
-                
-                const totalPriceShoes = itemsDelCliente.reduce((sum, item) => sum + item.priceShoes, 0);
-                const totalPrecioFinal = itemsDelCliente.reduce((sum, item) => sum + item.precioFinal, 0);
-                
-                detalles += `━━━━━━━━━━━━━━━━━━━━\n`;
-                detalles += `Total Items: ${itemsDelCliente.length}\n`;
-                detalles += `Total Price Shoes: $${totalPriceShoes.toFixed(2)}\n`;
-                detalles += `Total Precio Final: $${totalPrecioFinal.toFixed(2)}`;
-            }
-            
-            alert(detalles);
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error al cargar items', 'error');
-    }
-};
 
 // Editar deuda
 window.editarDeuda = function(clienteId, deudaId, nombre, monto) {
