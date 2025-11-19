@@ -460,6 +460,17 @@ select:focus {
     margin-bottom: 3px;
 }
 
+.pedido-item-marca {
+    display: inline-block;
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-left: 8px;
+    background: #e0e7ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
 .pedido-item-cliente {
     display: block;
     color: var(--text-light);

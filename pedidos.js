@@ -65,6 +65,8 @@ function renderItems() {
             <div class="item-info">
                 <strong>Item ${index + 1} - ${item.categoria}</strong>
                 <span>Cliente: ${item.clienteNombre}</span>
+                ${item.marca ? `<span>Marca: ${item.marca}</span>` : ''}
+                ${item.idPriceShoes ? `<span>ID: ${item.idPriceShoes}</span>` : ''}
                 <span>Número: ${item.numero}</span>
                 <span>Price Shoes: $${item.priceShoes.toFixed(2)}</span>
                 <span>Precio Final: $${item.precioFinal.toFixed(2)}</span>
@@ -87,11 +89,32 @@ function renderItems() {
 function clearItemForm() {
     document.getElementById('item-cliente').value = '';
     document.getElementById('item-categoria').value = 'Zapato';
+    document.getElementById('item-id-price').value = '';
+    document.getElementById('item-marca').value = '';
     document.getElementById('item-numero').value = '';
     document.getElementById('item-price-shoes').value = '';
     document.getElementById('item-precio-final').value = '';
-    document.getElementById('item-ubicacion').value = '';
+    document.getElementById('ubicacion-pasillo').value = '';
+    document.getElementById('ubicacion-rcolgada-num').value = '';
+    document.getElementById('ubicacion-mesa-num').value = '';
+    document.getElementById('ubicacion-ropa-colgada').checked = true;
+    handleCategoriaChange();
 }
+
+// Manejar cambio de categoría para mostrar/ocultar campos de ubicación
+window.handleCategoriaChange = function() {
+    const categoria = document.getElementById('item-categoria').value;
+    const ubicacionZapatoGroup = document.getElementById('ubicacion-zapato-group');
+    const ubicacionRopaGroup = document.getElementById('ubicacion-ropa-group');
+    
+    if (categoria === 'Zapato') {
+        ubicacionZapatoGroup.style.display = 'block';
+        ubicacionRopaGroup.style.display = 'none';
+    } else {
+        ubicacionZapatoGroup.style.display = 'none';
+        ubicacionRopaGroup.style.display = 'block';
+    }
+};
 
 // Limpiar formulario de pedido
 function clearPedidoForm() {
@@ -111,11 +134,29 @@ window.editItem = function(index) {
     document.getElementById('save-item').textContent = 'Actualizar Item';
     document.getElementById('item-cliente').value = item.clienteId;
     document.getElementById('item-categoria').value = item.categoria;
+    document.getElementById('item-id-price').value = item.idPriceShoes || '';
+    document.getElementById('item-marca').value = item.marca || '';
     document.getElementById('item-numero').value = item.numero;
     document.getElementById('item-price-shoes').value = item.priceShoes;
     document.getElementById('item-precio-final').value = item.precioFinal;
-    document.getElementById('item-ubicacion').value = item.ubicacion;
     
+    // Parsear ubicación
+    if (item.ubicacion) {
+        if (item.ubicacion.startsWith('Pasillo ')) {
+            const numPasillo = item.ubicacion.replace('Pasillo ', '');
+            document.getElementById('ubicacion-pasillo').value = numPasillo;
+        } else if (item.ubicacion.startsWith('R colgada ')) {
+            const numRColgada = item.ubicacion.replace('R colgada ', '');
+            document.getElementById('ubicacion-rcolgada-num').value = numRColgada;
+            document.getElementById('ubicacion-ropa-colgada').checked = true;
+        } else if (item.ubicacion.startsWith('Mesa ')) {
+            const numMesa = item.ubicacion.replace('Mesa ', '');
+            document.getElementById('ubicacion-mesa-num').value = numMesa;
+            document.getElementById('ubicacion-ropa-mesa').checked = true;
+        }
+    }
+    
+    handleCategoriaChange();
     document.getElementById('item-form').style.display = 'block';
     document.getElementById('item-form').scrollIntoView({ behavior: 'smooth' });
 };
@@ -276,9 +317,11 @@ export async function loadHistorialPedidos() {
                         <div class="pedido-item-content">
                             <div class="pedido-item-main">
                                 <strong>${item.categoria} - Número: ${item.numero}</strong>
+                                ${item.marca ? `<span class="pedido-item-marca">🏷️ ${item.marca}</span>` : ''}
                                 <span class="pedido-item-cliente">${item.clienteNombre}</span>
                             </div>
                             <div class="pedido-item-details">
+                                ${item.idPriceShoes ? `<span>ID: ${item.idPriceShoes}</span>` : ''}
                                 <span>Price Shoes: $${item.priceShoes.toFixed(2)}</span>
                                 <span>Precio Final: $${item.precioFinal.toFixed(2)}</span>
                                 ${item.ubicacion ? `<span>📍 ${item.ubicacion}</span>` : ''}
@@ -344,14 +387,37 @@ export function initPedidos() {
     document.getElementById('save-item').addEventListener('click', () => {
         const clienteId = document.getElementById('item-cliente').value;
         const categoria = document.getElementById('item-categoria').value;
+        const idPriceShoes = document.getElementById('item-id-price').value;
+        const marca = document.getElementById('item-marca').value;
         const numero = document.getElementById('item-numero').value;
         const priceShoes = parseFloat(document.getElementById('item-price-shoes').value) || 0;
         const precioFinal = parseFloat(document.getElementById('item-precio-final').value) || 0;
-        const ubicacion = document.getElementById('item-ubicacion').value;
 
         if (!clienteId || !numero || priceShoes <= 0 || precioFinal <= 0) {
             alert('Por favor completa todos los campos obligatorios del item', 'warning');
             return;
+        }
+
+        // Construir ubicación según categoría
+        let ubicacion = '';
+        if (categoria === 'Zapato') {
+            const numPasillo = document.getElementById('ubicacion-pasillo').value;
+            if (numPasillo) {
+                ubicacion = `Pasillo ${numPasillo}`;
+            }
+        } else if (categoria === 'Ropa') {
+            const tipoRopa = document.querySelector('input[name="ubicacion-ropa"]:checked').value;
+            if (tipoRopa === 'R colgada') {
+                const numRColgada = document.getElementById('ubicacion-rcolgada-num').value;
+                if (numRColgada) {
+                    ubicacion = `R colgada ${numRColgada}`;
+                }
+            } else if (tipoRopa === 'Mesa') {
+                const numMesa = document.getElementById('ubicacion-mesa-num').value;
+                if (numMesa) {
+                    ubicacion = `Mesa ${numMesa}`;
+                }
+            }
         }
 
         const clientes = getClientes();
@@ -360,10 +426,12 @@ export function initPedidos() {
             clienteId,
             clienteNombre: `${cliente.nombre} ${cliente.apellido}`,
             categoria,
+            idPriceShoes: idPriceShoes || '',
+            marca: marca || '',
             numero,
             priceShoes,
             precioFinal,
-            ubicacion: ubicacion || '',
+            ubicacion,
             completado: false,
             nota: ''
         };
