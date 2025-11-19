@@ -344,6 +344,132 @@ select:focus {
     margin: 0 auto;
 }
 
+/* Pedido Card Simple (sin expandir) */
+.pedido-card-simple {
+    background: var(--bg-white);
+    border-radius: 12px;
+    margin-bottom: 15px;
+    box-shadow: var(--shadow);
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pedido-card-simple:active {
+    transform: scale(0.98);
+    background: var(--bg-light);
+}
+
+.pedido-header-simple {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.pedido-header-simple h4 {
+    font-size: 1.1rem;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+/* Paginación */
+.pagination-container {
+    padding: 0 20px 20px 20px;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Detalle de pedido editable */
+.detalle-info-card {
+    background: var(--bg-light);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.detalle-info-card p {
+    margin: 8px 0;
+    color: var(--text-dark);
+}
+
+.item-detalle-editable {
+    background: var(--bg-white);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: var(--shadow);
+    border-left: 3px solid var(--primary);
+}
+
+.item-detalle-editable.item-completado-check {
+    opacity: 0.7;
+    border-left-color: var(--success);
+    background: #f0fdf4;
+}
+
+.item-detalle-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--bg-light);
+}
+
+.item-detalle-header input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--success);
+}
+
+.item-detalle-header strong {
+    flex: 1;
+    color: var(--text-dark);
+}
+
+.item-detalle-body p {
+    margin: 5px 0;
+    color: var(--text-dark);
+    font-size: 0.9rem;
+}
+
+.item-nota-detalle {
+    background: #fff3cd;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    color: #856404;
+    margin-top: 8px;
+    border-left: 3px solid #ffc107;
+}
+
+.item-detalle-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.item-detalle-actions button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-danger:active {
+    background: #dc2626;
+}
+
 /* Pedido Card (Acordeón) */
 .pedido-card {
     background: var(--bg-white);

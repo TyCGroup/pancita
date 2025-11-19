@@ -156,6 +156,22 @@
             <h2>Historial de Pedidos</h2>
         </header>
         <div class="list-container" id="historial-list"></div>
+        <div class="pagination-container">
+            <button class="btn-secondary" id="cargar-mas-pedidos" style="width: 100%;">Cargar más pedidos</button>
+        </div>
+    </div>
+
+    <!-- Pantalla Detalle de Pedido Individual -->
+    <div id="detalle-pedido-screen" class="screen">
+        <header class="app-header">
+            <button class="btn-back" id="back-detalle-pedido">←</button>
+            <h2 id="detalle-pedido-folio">Pedido</h2>
+        </header>
+        <div class="form-container">
+            <div id="detalle-pedido-info" class="detalle-info-card"></div>
+            <h3 style="margin: 20px 0 10px 0;">Items del Pedido</h3>
+            <div id="detalle-pedido-items"></div>
+        </div>
     </div>
 
     <!-- Pantalla de Clientes -->

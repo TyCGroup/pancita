@@ -20,6 +20,9 @@ import { alert, confirm, prompt } from './modals.js';
 const db = getFirestore(app);
 let items = [];
 let editingItemIndex = -1;
+let pedidosCache = []; // Cache de pedidos
+let pedidosCargados = 5; // Cantidad de pedidos a mostrar
+let currentPedido = null; // Pedido actual en detalle
 
 // Generar folio automático
 async function generarFolio() {
@@ -169,88 +172,38 @@ window.removeItem = function(index) {
     });
 };
 
-// Toggle expandir/colapsar items del pedido
-window.togglePedidoItems = function(pedidoId) {
-    const itemsContainer = document.getElementById(`items-${pedidoId}`);
-    const isExpanded = itemsContainer.style.display === 'block';
-    
-    // Colapsar todos los demás pedidos
-    document.querySelectorAll('.pedido-items-list').forEach(container => {
-        container.style.display = 'none';
-    });
-    
-    // Toggle el actual
-    itemsContainer.style.display = isExpanded ? 'none' : 'block';
-};
-
-// Toggle completado de item individual
-window.toggleItemCompletado = async function(pedidoId, itemIndex) {
+// Cargar historial de pedidos con paginación
+export async function loadHistorialPedidos(reload = false) {
     try {
-        const pedidoDoc = await getDoc(doc(db, 'pedidos', pedidoId));
-        if (pedidoDoc.exists()) {
-            const pedido = pedidoDoc.data();
-            pedido.items[itemIndex].completado = !pedido.items[itemIndex].completado;
+        // Si es reload, limpiar cache y resetear contador
+        if (reload) {
+            pedidosCache = [];
+            pedidosCargados = 5;
+        }
+
+        // Solo cargar si el cache está vacío
+        if (pedidosCache.length === 0) {
+            const q = query(collection(db, 'pedidos'), orderBy('fechaCreacion', 'desc'));
+            const querySnapshot = await getDocs(q);
             
-            await updateDoc(doc(db, 'pedidos', pedidoId), {
-                items: pedido.items
+            querySnapshot.forEach((docSnap) => {
+                pedidosCache.push({ id: docSnap.id, ...docSnap.data() });
             });
-            
-            // Recargar historial
-            await loadHistorialPedidos();
-            
-            // Mantener expandido el pedido actual
-            document.getElementById(`items-${pedidoId}`).style.display = 'block';
         }
-    } catch (error) {
-        console.error('Error actualizando item:', error);
-        alert('Error al actualizar item', 'error');
-    }
-};
 
-// Agregar nota a item
-window.agregarNotaItem = function(pedidoId, itemIndex, notaActual) {
-    prompt('Nota del item:', notaActual || '', async (nota) => {
-        try {
-            const pedidoDoc = await getDoc(doc(db, 'pedidos', pedidoId));
-            if (pedidoDoc.exists()) {
-                const pedido = pedidoDoc.data();
-                pedido.items[itemIndex].nota = nota;
-                
-                await updateDoc(doc(db, 'pedidos', pedidoId), {
-                    items: pedido.items
-                });
-                
-                alert('Nota guardada correctamente', 'success');
-                
-                // Recargar historial
-                await loadHistorialPedidos();
-                
-                // Mantener expandido el pedido actual
-                document.getElementById(`items-${pedidoId}`).style.display = 'block';
-            }
-        } catch (error) {
-            console.error('Error guardando nota:', error);
-            alert('Error al guardar nota', 'error');
-        }
-    });
-};
-
-// Cargar historial de pedidos
-export async function loadHistorialPedidos() {
-    try {
-        const q = query(collection(db, 'pedidos'), orderBy('fechaCreacion', 'desc'));
-        const querySnapshot = await getDocs(q);
         const list = document.getElementById('historial-list');
         list.innerHTML = '';
 
-        if (querySnapshot.empty) {
+        if (pedidosCache.length === 0) {
             list.innerHTML = '<div class="empty-state"><p>No hay pedidos registrados</p></div>';
+            document.getElementById('cargar-mas-pedidos').style.display = 'none';
             return;
         }
 
-        querySnapshot.forEach((docSnap) => {
-            const pedido = { id: docSnap.id, ...docSnap.data() };
-            const pedidoId = docSnap.id;
+        // Mostrar solo los primeros N pedidos
+        const pedidosAMostrar = pedidosCache.slice(0, pedidosCargados);
+
+        pedidosAMostrar.forEach((pedido) => {
             const fecha = pedido.fechaCreacion.toDate().toLocaleDateString();
             const cantidadItems = pedido.items ? pedido.items.length : 0;
             
@@ -274,84 +227,238 @@ export async function loadHistorialPedidos() {
             }
             
             const div = document.createElement('div');
-            div.className = 'pedido-card';
-            
-            // Header del pedido (clickeable)
-            const header = document.createElement('div');
-            header.className = 'pedido-header';
-            header.onclick = () => togglePedidoItems(pedidoId);
-            header.innerHTML = `
-                <div class="pedido-header-content">
+            div.className = 'pedido-card-simple';
+            div.onclick = () => verDetallePedido(pedido.id);
+            div.innerHTML = `
+                <div class="pedido-header-simple">
                     <h4>Folio: ${pedido.folio}</h4>
                     <span class="pedido-progress">${itemsCompletados}/${cantidadItems}</span>
                 </div>
                 <div class="pedido-info">
                     <p><strong>Clientes:</strong> ${clientesTexto}</p>
                     ${categorias ? `<p><strong>Categorías:</strong> ${categorias}</p>` : ''}
-                    <p><strong>Total Precio Final:</strong> $${(pedido.totalPrecioFinal || 0).toFixed(2)}</p>
+                    <p><strong>Total:</strong> $${(pedido.totalPrecioFinal || 0).toFixed(2)}</p>
                     <p><strong>Fecha:</strong> ${fecha}</p>
                 </div>
             `;
-            div.appendChild(header);
-            
-            // Lista de items (colapsable)
-            const itemsList = document.createElement('div');
-            itemsList.id = `items-${pedidoId}`;
-            itemsList.className = 'pedido-items-list';
-            itemsList.style.display = 'none';
-            
-            if (pedido.items && pedido.items.length > 0) {
-                pedido.items.forEach((item, index) => {
-                    const completado = item.completado || false;
-                    const nota = item.nota || '';
-                    
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = `pedido-item ${completado ? 'item-completado-check' : ''}`;
-                    itemDiv.innerHTML = `
-                        <div class="pedido-item-checkbox">
-                            <input type="checkbox" 
-                                   id="check-${pedidoId}-${index}" 
-                                   ${completado ? 'checked' : ''}
-                                   onchange="toggleItemCompletado('${pedidoId}', ${index})">
-                        </div>
-                        <div class="pedido-item-content">
-                            <div class="pedido-item-main">
-                                <strong>${item.categoria} - Número: ${item.numero}</strong>
-                                ${item.marca ? `<span class="pedido-item-marca">🏷️ ${item.marca}</span>` : ''}
-                                <span class="pedido-item-cliente">${item.clienteNombre}</span>
-                            </div>
-                            <div class="pedido-item-details">
-                                ${item.idPriceShoes ? `<span>ID: ${item.idPriceShoes}</span>` : ''}
-                                <span>Price Shoes: $${item.priceShoes.toFixed(2)}</span>
-                                <span>Precio Final: $${item.precioFinal.toFixed(2)}</span>
-                                ${item.ubicacion ? `<span>📍 ${item.ubicacion}</span>` : ''}
-                            </div>
-                            ${nota ? `<div class="pedido-item-nota">📝 ${nota}</div>` : ''}
-                        </div>
-                        <div class="pedido-item-actions">
-                            <button class="btn-nota-small" onclick="agregarNotaItem('${pedidoId}', ${index}, '${nota.replace(/'/g, "\\'")}')">
-                                ${nota ? '✏️' : '📝'}
-                            </button>
-                        </div>
-                    `;
-                    itemsList.appendChild(itemDiv);
-                });
-            }
-            
-            div.appendChild(itemsList);
             list.appendChild(div);
         });
+
+        // Mostrar/ocultar botón "Cargar más"
+        const btnCargarMas = document.getElementById('cargar-mas-pedidos');
+        if (pedidosCargados >= pedidosCache.length) {
+            btnCargarMas.style.display = 'none';
+        } else {
+            btnCargarMas.style.display = 'block';
+        }
+
     } catch (error) {
         console.error('Error cargando historial:', error);
         alert('Error al cargar historial', 'error');
     }
 }
 
+// Ver detalle de pedido individual
+window.verDetallePedido = async function(pedidoId) {
+    try {
+        // Buscar en cache primero
+        let pedido = pedidosCache.find(p => p.id === pedidoId);
+        
+        // Si no está en cache, cargar desde Firestore
+        if (!pedido) {
+            const pedidoDoc = await getDoc(doc(db, 'pedidos', pedidoId));
+            if (pedidoDoc.exists()) {
+                pedido = { id: pedidoDoc.id, ...pedidoDoc.data() };
+            }
+        }
+
+        if (pedido) {
+            currentPedido = pedido;
+            mostrarPantallaDetallePedido(pedido);
+        }
+    } catch (error) {
+        console.error('Error cargando detalle:', error);
+        alert('Error al cargar detalle del pedido', 'error');
+    }
+};
+
+// Mostrar pantalla de detalle con items editables
+function mostrarPantallaDetallePedido(pedido) {
+    document.getElementById('detalle-pedido-folio').textContent = `Pedido ${pedido.folio}`;
+    
+    let clientesTexto = '';
+    if (pedido.clientes && pedido.clientes.length > 0) {
+        clientesTexto = pedido.clientes.join(', ');
+    } else if (pedido.clienteNombre) {
+        clientesTexto = pedido.clienteNombre;
+    }
+
+    const cantidadItems = pedido.items ? pedido.items.length : 0;
+    let itemsCompletados = 0;
+    if (pedido.items) {
+        itemsCompletados = pedido.items.filter(item => item.completado).length;
+    }
+
+    const fecha = pedido.fechaCreacion.toDate().toLocaleDateString();
+    
+    // Info del pedido
+    const infoCard = document.getElementById('detalle-pedido-info');
+    infoCard.innerHTML = `
+        <p><strong>Clientes:</strong> ${clientesTexto}</p>
+        <p><strong>Fecha:</strong> ${fecha}</p>
+        <p><strong>Items:</strong> ${itemsCompletados}/${cantidadItems} completados</p>
+        <p><strong>Total Price Shoes:</strong> $${(pedido.totalPriceShoes || 0).toFixed(2)}</p>
+        <p><strong>Total Precio Final:</strong> $${(pedido.totalPrecioFinal || 0).toFixed(2)}</p>
+    `;
+
+    // Lista de items editables
+    const itemsContainer = document.getElementById('detalle-pedido-items');
+    itemsContainer.innerHTML = '';
+
+    if (pedido.items && pedido.items.length > 0) {
+        pedido.items.forEach((item, index) => {
+            const completado = item.completado || false;
+            const nota = item.nota || '';
+            
+            const itemDiv = document.createElement('div');
+            itemDiv.className = `item-detalle-editable ${completado ? 'item-completado-check' : ''}`;
+            itemDiv.innerHTML = `
+                <div class="item-detalle-header">
+                    <input type="checkbox" 
+                           ${completado ? 'checked' : ''}
+                           onchange="toggleItemCompletadoDetalle(${index})">
+                    <strong>${item.categoria} - #${item.numero}</strong>
+                </div>
+                <div class="item-detalle-body">
+                    <p><strong>Cliente:</strong> ${item.clienteNombre}</p>
+                    ${item.marca ? `<p><strong>Marca:</strong> ${item.marca}</p>` : ''}
+                    ${item.idPriceShoes ? `<p><strong>ID:</strong> ${item.idPriceShoes}</p>` : ''}
+                    <p><strong>Price Shoes:</strong> $${item.priceShoes.toFixed(2)}</p>
+                    <p><strong>Precio Final:</strong> $${item.precioFinal.toFixed(2)}</p>
+                    ${item.ubicacion ? `<p><strong>Ubicación:</strong> ${item.ubicacion}</p>` : ''}
+                    ${nota ? `<div class="item-nota-detalle">📝 ${nota}</div>` : ''}
+                </div>
+                <div class="item-detalle-actions">
+                    <button class="btn-secondary" onclick="editarNotaItemDetalle(${index}, '${nota.replace(/'/g, "\\'")}')">
+                        ${nota ? 'Editar Nota' : 'Agregar Nota'}
+                    </button>
+                    <button class="btn-danger" onclick="eliminarItemDetalle(${index})">
+                        Eliminar Item
+                    </button>
+                </div>
+            `;
+            itemsContainer.appendChild(itemDiv);
+        });
+    }
+
+    showScreen('detalle-pedido-screen');
+}
+
+// Toggle completado desde detalle
+window.toggleItemCompletadoDetalle = async function(itemIndex) {
+    try {
+        currentPedido.items[itemIndex].completado = !currentPedido.items[itemIndex].completado;
+        
+        await updateDoc(doc(db, 'pedidos', currentPedido.id), {
+            items: currentPedido.items
+        });
+        
+        // Actualizar cache
+        const cacheIndex = pedidosCache.findIndex(p => p.id === currentPedido.id);
+        if (cacheIndex !== -1) {
+            pedidosCache[cacheIndex] = currentPedido;
+        }
+        
+        mostrarPantallaDetallePedido(currentPedido);
+    } catch (error) {
+        console.error('Error actualizando item:', error);
+        alert('Error al actualizar item', 'error');
+    }
+};
+
+// Editar nota desde detalle
+window.editarNotaItemDetalle = function(itemIndex, notaActual) {
+    prompt('Nota del item:', notaActual || '', async (nota) => {
+        try {
+            currentPedido.items[itemIndex].nota = nota;
+            
+            await updateDoc(doc(db, 'pedidos', currentPedido.id), {
+                items: currentPedido.items
+            });
+            
+            // Actualizar cache
+            const cacheIndex = pedidosCache.findIndex(p => p.id === currentPedido.id);
+            if (cacheIndex !== -1) {
+                pedidosCache[cacheIndex] = currentPedido;
+            }
+            
+            alert('Nota guardada correctamente', 'success');
+            mostrarPantallaDetallePedido(currentPedido);
+        } catch (error) {
+            console.error('Error guardando nota:', error);
+            alert('Error al guardar nota', 'error');
+        }
+    });
+};
+
+// Eliminar item desde detalle
+window.eliminarItemDetalle = function(itemIndex) {
+    const item = currentPedido.items[itemIndex];
+    confirm(`¿Eliminar item ${item.categoria} - #${item.numero}?`, async () => {
+        try {
+            currentPedido.items.splice(itemIndex, 1);
+            
+            // Recalcular totales
+            const totalPriceShoes = currentPedido.items.reduce((sum, item) => sum + item.priceShoes, 0);
+            const totalPrecioFinal = currentPedido.items.reduce((sum, item) => sum + item.precioFinal, 0);
+            
+            await updateDoc(doc(db, 'pedidos', currentPedido.id), {
+                items: currentPedido.items,
+                totalPriceShoes,
+                totalPrecioFinal
+            });
+            
+            currentPedido.totalPriceShoes = totalPriceShoes;
+            currentPedido.totalPrecioFinal = totalPrecioFinal;
+            
+            // Actualizar cache
+            const cacheIndex = pedidosCache.findIndex(p => p.id === currentPedido.id);
+            if (cacheIndex !== -1) {
+                pedidosCache[cacheIndex] = currentPedido;
+            }
+            
+            alert('Item eliminado correctamente', 'success');
+            
+            // Si no quedan items, volver al historial
+            if (currentPedido.items.length === 0) {
+                showScreen('historial-pedidos-screen');
+                await loadHistorialPedidos(true);
+            } else {
+                mostrarPantallaDetallePedido(currentPedido);
+            }
+        } catch (error) {
+            console.error('Error eliminando item:', error);
+            alert('Error al eliminar item', 'error');
+        }
+    });
+};
+
 // Inicializar eventos de pedidos
 export function initPedidos() {
     // Cerrar modal detalle
     document.getElementById('modal-detalle-close')?.addEventListener('click', () => {
         document.getElementById('modal-detalle-pedido').classList.remove('active');
+    });
+
+    // Navegación detalle pedido
+    document.getElementById('back-detalle-pedido')?.addEventListener('click', () => {
+        showScreen('historial-pedidos-screen');
+    });
+
+    // Cargar más pedidos
+    document.getElementById('cargar-mas-pedidos')?.addEventListener('click', () => {
+        pedidosCargados += 5;
+        loadHistorialPedidos(false);
     });
 
     // Botón nuevo pedido
@@ -363,7 +470,7 @@ export function initPedidos() {
 
     // Botón historial
     document.getElementById('btn-historial-pedidos').addEventListener('click', async () => {
-        await loadHistorialPedidos();
+        await loadHistorialPedidos(true);
         showScreen('historial-pedidos-screen');
     });
 
