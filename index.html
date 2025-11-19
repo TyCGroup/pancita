@@ -305,7 +305,7 @@
     <!-- Modal para agregar deuda -->
     <div id="modal-deuda" class="modal">
         <div class="modal-content">
-            <h3>Agregar Deuda</h3>
+            <h3 id="modal-deuda-title">Agregar Deuda</h3>
             <div class="form-group">
                 <label>Nombre del Item</label>
                 <input type="text" id="modal-deuda-nombre" placeholder="Descripción">
@@ -324,7 +324,7 @@
     <!-- Modal para agregar abono -->
     <div id="modal-abono" class="modal">
         <div class="modal-content">
-            <h3>Agregar Abono</h3>
+            <h3 id="modal-abono-title">Agregar Abono</h3>
             <div class="form-group">
                 <label>Monto</label>
                 <input type="number" id="modal-abono-monto" placeholder="0.00" step="0.01">
@@ -340,6 +340,9 @@
         </div>
     </div>
 
+    <!-- jsPDF para generar PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
     <script type="module" src="firebase-config.js"></script>
     <script type="module" src="app.js"></script>
 </body>

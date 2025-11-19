@@ -4,6 +4,12 @@ export function showScreen(screenId) {
     document.getElementById(screenId).classList.add('active');
 }
 
+export function resetearEstadoPedido() {
+    // Esta función será llamada por pedidos.js para resetear el estado
+    document.querySelector('#nuevo-pedido-screen h2').textContent = 'Nuevo Pedido';
+    document.getElementById('guardar-pedido').textContent = 'Guardar Pedido';
+}
+
 export function initNavigation() {
     // Menú principal
     document.getElementById('menu-pedidos').addEventListener('click', () => {
@@ -20,6 +26,10 @@ export function initNavigation() {
     });
 
     document.getElementById('back-nuevo-pedido').addEventListener('click', () => {
+        // Resetear el estado del pedido
+        if (window.resetPedidoState) {
+            window.resetPedidoState();
+        }
         showScreen('pedidos-screen');
     });
 

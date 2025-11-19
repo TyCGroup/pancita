@@ -344,20 +344,62 @@ select:focus {
     margin: 0 auto;
 }
 
-/* Pedido Card Simple (sin expandir) */
 .pedido-card-simple {
     background: var(--bg-white);
     border-radius: 12px;
     margin-bottom: 15px;
     box-shadow: var(--shadow);
     padding: 15px;
+    transition: all 0.2s ease;
+}
+
+.pedido-card-simple:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.pedido-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 2px solid var(--bg-light);
+}
+
+.pedido-actions button {
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.pedido-card-simple:active {
-    transform: scale(0.98);
-    background: var(--bg-light);
+.pedido-actions button:active {
+    transform: scale(0.95);
+}
+
+.pedido-actions .btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.pedido-actions .btn-secondary {
+    background: var(--warning);
+    color: white;
+}
+
+.pedido-actions .btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+/* Responsive para botones en móvil */
+@media (max-width: 480px) {
+    .pedido-actions {
+        grid-template-columns: 1fr;
+    }
 }
 
 .pedido-header-simple {
@@ -654,6 +696,48 @@ select:focus {
     border-radius: 10px;
     margin-bottom: 15px;
     box-shadow: var(--shadow);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.list-item-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.btn-edit,
+.btn-delete {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-edit {
+    background: var(--warning);
+}
+
+.btn-edit:active {
+    background: #f59e0b;
+    transform: scale(0.95);
+}
+
+.btn-delete {
+    background: var(--danger);
+}
+
+.btn-delete:active {
+    background: #dc2626;
+    transform: scale(0.95);
 }
 
 .list-item-header {
